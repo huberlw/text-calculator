@@ -1,17 +1,4 @@
-#include <stack>
-#include <queue>
-#include <string>
-
-class EvaluateExpression
-{
-    public:
-        double evaluate(std::string);
-
-    private:
-        std::string* get_tokens(std::string);
-        std::queue<std::string> shunting_yard(std::string*);
-        double rpn(std::queue<std::string>);
-};
+#include <evaluate_expression.h>
 
 
 double EvaluateExpression::evaluate(std::string expression)
@@ -20,24 +7,184 @@ double EvaluateExpression::evaluate(std::string expression)
 }
 
 
-std::string* get_tokens(std::string expression)
+std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
 {
-    // tokens should be broken into operators or numbers
-    std::string *tokens;
+    // tokens should be broken into operators, numbers, or functions
+    std::vector<std::string> tokens;
+
+    // remove all spaces from expression
+    remove(expression.begin(), expression.end(), ' ');
+
+    /*
+    NUMBERS AND OPERATORS CAN BE TYPED. FUNCTIONS CANNOT. 
+
+    POTENTIAL ERRORS:
+    (), (()), 5++5, (+), 5+, ^^, sin(), 5^
+    */
+
+    // whether binary operators are allowed or not
+    bool allow_binary = false;
+    
+    // whether the next number will be negative
+    bool neg_next = false;
+
+    // whether the next token must be a number
+    bool number_next = false;
+
+    // number of brackets/parentheses left open
+    int open_brackets = 0;
+    int open_parenthesis = 0;
+
+    // get tokens
+    for (int i = 0; i < expression.length(); i++)
+    {
+        // check for number
+        if (isdigit(expression[i]) || expression[i] == '.')
+        {
+            // allow binary operators
+            allow_binary = true;
+
+            int len = 1;
+
+            // get length of number
+            while (isdigit(expression[i+1]) || expression[i+1] == '.')
+                len++;
+            
+            // get number as string
+            std::string toke = expression.substr(i, len);
+
+            // make number negative (unary operator)
+            if (neg_next)
+            {
+                toke.insert(0, "-");
+                neg_next = false;
+            }
+
+            tokens.push_back(toke);
+
+            i += len - 1;
+        }
+        // check for operator
+        else if (expression[i] == '*')
+        {
+            if (allow_binary)
+            {
+
+            }
+            else
+            {
+                tokens.clear();
+                return tokens;
+            }
+        }
+        else if (expression[i] == '/')
+        {
+            if (allow_binary)
+            {
+
+            }
+            else
+            {
+                tokens.clear();
+                return tokens;
+            }
+        }
+        else if (expression[i] == '+')
+        {
+            if (allow_binary)
+            {
+
+            }
+            else
+            {
+                continue;
+            }
+        }
+        else if (expression[i] == '-')
+        {
+            if (allow_binary)
+            {
+
+            }
+            else
+            {
+                neg_next = !neg_next;
+            }
+        }
+        // check for parenthesis/bracket
+        else if (expression[i] == '(')
+        {
+            tokens.push_back(expression.substr(i, 1));
+            open_parenthesis++;
+        }
+        else if (expression[i] == ')')
+        {
+            tokens.push_back(expression.substr(i, 1));
+            open_parenthesis--;
+        }
+        else if (expression[i] == '{')
+        {
+            tokens.push_back(expression.substr(i, 1));
+            open_brackets++;
+        }
+        else if (expression[i] == '}')
+        {
+            tokens.push_back(expression.substr(i, 1));
+            open_brackets--;
+        }
+        // check for function
+        else if (expression.substr(i, 4).compare("sin("))
+        {
+            open_parenthesis++;
+            tokens.push_back("sin(");
+        }
+        else if (expression.substr(i, 4).compare("cos("))
+        {
+            open_parenthesis++;
+            tokens.push_back("cos(");
+        }
+        else if (expression.substr(i, 4).compare("tan("))
+        {
+            open_parenthesis++;
+            tokens.push_back("tan(");
+        }
+        else if (expression.substr(i, 4).compare("cot("))
+        {
+            open_parenthesis++;
+            tokens.push_back("cot(");
+        }
+        else if (expression.substr(i, 4).compare("log("))
+        {
+            open_parenthesis++;
+            tokens.push_back("log(");
+        }
+        else if (expression.substr(i, 3).compare("ln("))
+        {
+            open_parenthesis++;
+            tokens.push_back("ln(");
+        }
+        else
+        {
+
+        }
+    }
+
+    if (open_parenthesis > 0 || open_brackets > 0)
+        tokens.clear();
 
     return tokens;
 }
 
 
-std::queue<std::string> EvaluateExpression::shunting_yard(std::string *expression)
+std::queue<std::string> EvaluateExpression::shunting_yard(std::vector<std::string> tokens)
 {
     // operator stack and output queue
     std::stack<std::string> opStack;
     std::queue<std::string> outQueue;
 
-    for(int i = 0; i < sizeof expression; i++)
+    for(int i = 0; i < tokens.size(); i++)
     {
-        std::string token = expression[i];
+        std::string token = tokens.at(i);
 
         if (true)
         {
