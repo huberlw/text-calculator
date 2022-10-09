@@ -35,12 +35,19 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
     int open_brackets = 0;
     int open_parenthesis = 0;
 
+    // whether the brackets/parentheses need to be filled or not
+    bool need_fill = false;
+
     // get tokens
     for (int i = 0; i < expression.length(); i++)
     {
         // check for number
         if (isdigit(expression[i]) || expression[i] == '.')
         {
+            // brackets/parentheses no longer empty
+            if (need_fill)
+                need_fill = false;
+
             // allow binary operators
             allow_binary = true;
 
@@ -60,16 +67,33 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
                 neg_next = false;
             }
 
+            // ensure string is valid number
+            try
+            {
+                double test = std::stod(toke);
+            }
+            catch (std::invalid_argument& ia)
+            {
+                tokens.clear();
+                return tokens;
+            }
+
             tokens.push_back(toke);
 
             i += len - 1;
         }
-        // check for operator
-        else if (expression[i] == '*')
+        // check for unary operator
+        else if (expression[i] == 'n')
+        {
+            neg_next = !neg_next;
+        }
+        // check for binary operator
+        else if (expression[i] == '*' || expression[i] == '/')
         {
             if (allow_binary)
             {
-
+                tokens.push_back(expression.substr(i, 1));
+                allow_binary = false;
             }
             else
             {
@@ -77,99 +101,114 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
                 return tokens;
             }
         }
-        else if (expression[i] == '/')
+        else if (expression[i] == '+' || expression[i] == '-')
         {
             if (allow_binary)
             {
-
+                tokens.push_back(expression.substr(i, 1));
+                allow_binary = false;
             }
             else
             {
                 tokens.clear();
                 return tokens;
-            }
-        }
-        else if (expression[i] == '+')
-        {
-            if (allow_binary)
-            {
-
-            }
-            else
-            {
-                continue;
-            }
-        }
-        else if (expression[i] == '-')
-        {
-            if (allow_binary)
-            {
-
-            }
-            else
-            {
-                neg_next = !neg_next;
             }
         }
         // check for parenthesis/bracket
         else if (expression[i] == '(')
         {
-            tokens.push_back(expression.substr(i, 1));
+            tokens.push_back("(");
             open_parenthesis++;
+            need_fill = true;
         }
         else if (expression[i] == ')')
         {
-            tokens.push_back(expression.substr(i, 1));
+            // invalid expression
+            if (need_fill)
+            {
+                tokens.clear();
+                return tokens;
+            }
+
+            // allow binary operators
+            allow_binary = true;
+
+            tokens.push_back(")");
             open_parenthesis--;
         }
         else if (expression[i] == '{')
         {
-            tokens.push_back(expression.substr(i, 1));
+            tokens.push_back("{");
             open_brackets++;
+            need_fill = true;
         }
         else if (expression[i] == '}')
         {
-            tokens.push_back(expression.substr(i, 1));
+            // invalid expression
+            if (need_fill)
+            {
+                tokens.clear();
+                return tokens;
+            }
+
+            // allow binary operators
+            allow_binary = true;
+
+            tokens.push_back("}");
             open_brackets--;
         }
         // check for function
         else if (expression.substr(i, 4).compare("sin("))
         {
-            open_parenthesis++;
             tokens.push_back("sin(");
+            open_parenthesis++;
+            need_fill = true;
+            i += 3;
         }
         else if (expression.substr(i, 4).compare("cos("))
         {
-            open_parenthesis++;
             tokens.push_back("cos(");
+            open_parenthesis++;
+            need_fill = true;
+            i += 3;
         }
         else if (expression.substr(i, 4).compare("tan("))
         {
-            open_parenthesis++;
             tokens.push_back("tan(");
+            open_parenthesis++;
+            need_fill = true;
+            i += 3;
         }
         else if (expression.substr(i, 4).compare("cot("))
         {
-            open_parenthesis++;
             tokens.push_back("cot(");
+            open_parenthesis++;
+            need_fill = true;
+            i += 3;
         }
         else if (expression.substr(i, 4).compare("log("))
         {
-            open_parenthesis++;
             tokens.push_back("log(");
+            open_parenthesis++;
+            need_fill = true;
+            i += 3;
         }
         else if (expression.substr(i, 3).compare("ln("))
         {
-            open_parenthesis++;
             tokens.push_back("ln(");
+            open_parenthesis++;
+            need_fill = true;
+            i += 3;
         }
+        // invalid expression
         else
         {
-
+            tokens.clear();
+            return tokens;
         }
     }
 
-    if (open_parenthesis > 0 || open_brackets > 0)
+    if (open_parenthesis != 0 || open_brackets != 0)
         tokens.clear();
 
     return tokens;
@@ -235,6 +274,47 @@ std::queue<std::string> EvaluateExpression::shunting_yard(std::vector<std::strin
 
 double EvaluateExpression::rpn(std::queue<std::string> output)
 {
+
+    return 0;
+}
+
+int main()
+{
+    std::string exp1 = "-5.78+-(4-2.23)+sin(0)*cos(1)/(1+tan(2*ln(-3+2*(1.23+99.111)))";
+    std::string exp2 = "---3";
+    std::string exp3 = "(())";
+    std::string exp4 = "((5))";
+    std::string exp5 = "((2+3/)(4/- ";
+
+    std::vector<std::string> t = EvaluateExpression::get_tokens(exp1);
+    for (int i = 0; i < t.size(); i++)
+    {
+        std::cout << t.at(i) << ", ";
+    }
+    std::cout << std::endl << std::endl;
+    t = EvaluateExpression::get_tokens(exp2);
+    for (int i = 0; i < t.size(); i++)
+    {
+        std::cout << t.at(i) << ", ";
+    }
+    std::cout << std::endl << std::endl;
+    t = EvaluateExpression::get_tokens(exp3);
+    for (int i = 0; i < t.size(); i++)
+    {
+        std::cout << t.at(i) << ", ";
+    }
+    std::cout << std::endl << std::endl;
+    t = EvaluateExpression::get_tokens(exp4);
+    for (int i = 0; i < t.size(); i++)
+    {
+        std::cout << t.at(i) << ", ";
+    }
+    std::cout << std::endl << std::endl;
+    t = EvaluateExpression::get_tokens(exp5);
+    for (int i = 0; i < t.size(); i++)
+    {
+        std::cout << t.at(i) << ", ";
+    }
 
     return 0;
 }

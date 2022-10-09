@@ -3,15 +3,16 @@
 #include <vector>
 #include <string>
 #include <stdbool.h>
+#include <iostream>
 
 
 class EvaluateExpression
 {
     public:
-        double evaluate(std::string);
+        static double evaluate(std::string);
+        static std::vector<std::string> get_tokens(std::string);
 
     private:
-        std::vector<std::string> get_tokens(std::string);
-        std::queue<std::string> shunting_yard(std::vector<std::string>);
-        double rpn(std::queue<std::string>);
+        static std::queue<std::string> shunting_yard(std::vector<std::string>);
+        static double rpn(std::queue<std::string>);
 };
