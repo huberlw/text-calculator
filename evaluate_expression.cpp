@@ -1,35 +1,44 @@
-#include <evaluate_expression.h>
+#include "evaluate_expression.h"
+
+const std::string SIN = "sin";
+const std::string COS = "cos";
+const std::string TAN = "tan";
+const std::string COT = "cot";
+const std::string LOG = "log";
+const std::string LN = "ln";
+
+const int LEFT_ASSOC = 2;
+
+const std::map<std::string, int> OP_PREC = {{"+", 1}, {"-", 1}, {"*", 2}, {"/", 2},
+                                            {"^", 3}, {SIN, 4}, {COS, 4}, {TAN, 4},
+                                            {COT, 4}, {LOG, 4}, {LN, 4}};
 
 
+/**
+ * @brief Evaluates infix notation mathematical expressions
+ * 
+ * @param expression infix notation expression
+ * @return double answer to expression
+ */
 double EvaluateExpression::evaluate(std::string expression)
 {
     return rpn(shunting_yard(get_tokens(expression)));
 }
 
 
+/**
+ * @brief Parses infix notation equation into tokens
+ * 
+ * @param expression infix notation expression
+ * @return std::vector<std::string> expression parsed into tokens
+ */
 std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
 {
     // tokens should be broken into operators, numbers, or functions
     std::vector<std::string> tokens;
 
-    // remove all spaces from expression
-    remove(expression.begin(), expression.end(), ' ');
-
-    /*
-    NUMBERS AND OPERATORS CAN BE TYPED. FUNCTIONS CANNOT. 
-
-    POTENTIAL ERRORS:
-    (), (()), 5++5, (+), 5+, ^^, sin(), 5^
-    */
-
     // whether binary operators are allowed or not
     bool allow_binary = false;
-    
-    // whether the next number will be negative
-    bool neg_next = false;
-
-    // whether the next token must be a number
-    bool number_next = false;
 
     // number of brackets/parentheses left open
     int open_brackets = 0;
@@ -41,170 +50,167 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
     // get tokens
     for (int i = 0; i < expression.length(); i++)
     {
-        // check for number
-        if (isdigit(expression[i]) || expression[i] == '.')
+        // check for blank space
+        if (expression[i] != ' ')
         {
-            // brackets/parentheses no longer empty
-            if (need_fill)
-                need_fill = false;
-
-            // allow binary operators
-            allow_binary = true;
-
-            int len = 1;
-
-            // get length of number
-            while (isdigit(expression[i+1]) || expression[i+1] == '.')
-                len++;
-            
-            // get number as string
-            std::string toke = expression.substr(i, len);
-
-            // make number negative (unary operator)
-            if (neg_next)
+            // check for number
+            if (isdigit(expression[i]) || expression[i] == '.')
             {
-                toke.insert(0, "-");
-                neg_next = false;
-            }
+                // brackets/parentheses no longer empty
+                if (need_fill)
+                    need_fill = false;
 
-            // ensure string is valid number
-            try
-            {
-                double test = std::stod(toke);
-            }
-            catch (std::invalid_argument& ia)
-            {
-                tokens.clear();
-                return tokens;
-            }
+                // allow binary operators
+                allow_binary = true;
 
-            tokens.push_back(toke);
+                int len = 1;
 
-            i += len - 1;
-        }
-        // check for unary operator
-        else if (expression[i] == 'n')
-        {
-            neg_next = !neg_next;
-        }
-        // check for binary operator
-        else if (expression[i] == '*' || expression[i] == '/')
-        {
-            if (allow_binary)
-            {
-                tokens.push_back(expression.substr(i, 1));
-                allow_binary = false;
+                // get length of number
+                while (isdigit(expression[i+len]) || expression[i+len] == '.')
+                    len++;
+                
+                // get number as string
+                std::string toke = expression.substr(i, len);
+
+                // ensure string is valid number
+                try
+                {
+                    double test = std::stod(toke);
+                }
+                catch (std::invalid_argument& ia)
+                {
+                    tokens.clear();
+                    return tokens;
+                }
+
+                tokens.push_back(toke);
+
+                i += len - 1;
             }
-            else
+            // check for unary operator
+            else if (expression[i] == '-' && !allow_binary)
             {
-                tokens.clear();
-                return tokens;
+                tokens.push_back("-1");
+                tokens.push_back("*");
             }
-        }
-        else if (expression[i] == '+' || expression[i] == '-')
-        {
-            if (allow_binary)
+            // check for binary operator
+            else if (expression[i] == '*' || expression[i] == '/')
             {
-                tokens.push_back(expression.substr(i, 1));
-                allow_binary = false;
+                if (allow_binary)
+                {
+                    tokens.push_back(expression.substr(i, 1));
+                    allow_binary = false;
+                }
+                else
+                {
+                    tokens.clear();
+                    return tokens;
+                }
             }
-            else
+            else if (expression[i] == '+' || expression[i] == '-')
             {
-                tokens.clear();
-                return tokens;
+                if (allow_binary)
+                {
+                    tokens.push_back(expression.substr(i, 1));
+                    allow_binary = false;
+                }
+                else
+                {
+                    tokens.clear();
+                    return tokens;
+                }
             }
-        }
-        // check for parenthesis/bracket
-        else if (expression[i] == '(')
-        {
-            tokens.push_back("(");
-            open_parenthesis++;
-            need_fill = true;
-        }
-        else if (expression[i] == ')')
-        {
+            // check for parenthesis/bracket
+            else if (expression[i] == '(')
+            {
+                tokens.push_back("(");
+                open_parenthesis++;
+                need_fill = true;
+            }
+            else if (expression[i] == ')')
+            {
+                // invalid expression
+                if (need_fill)
+                {
+                    tokens.clear();
+                    return tokens;
+                }
+
+                // allow binary operators
+                allow_binary = true;
+
+                tokens.push_back(")");
+                open_parenthesis--;
+            }
+            else if (expression[i] == '{')
+            {
+                tokens.push_back("{");
+                open_brackets++;
+                need_fill = true;
+            }
+            else if (expression[i] == '}')
+            {
+                // invalid expression
+                if (need_fill)
+                {
+                    tokens.clear();
+                    return tokens;
+                }
+
+                // allow binary operators
+                allow_binary = true;
+
+                tokens.push_back("}");
+                open_brackets--;
+            }
+            // check for function
+            else if (expression[i] == '^')
+            {
+                tokens.push_back("^");
+                need_fill = true;
+            }
+            else if (expression.substr(i, 3) == SIN)
+            {
+                tokens.push_back(SIN);
+                need_fill = true;
+                i += 2;
+            }
+            else if (expression.substr(i, 3) == COS)
+            {
+                tokens.push_back(COS);
+                need_fill = true;
+                i += 2;
+            }
+            else if (expression.substr(i, 3) == TAN)
+            {
+                tokens.push_back(TAN);
+                need_fill = true;
+                i += 2;
+            }
+            else if (expression.substr(i, 3) == COT)
+            {
+                tokens.push_back(COT);
+                need_fill = true;
+                i += 2;
+            }
+            else if (expression.substr(i, 3) == LOG)
+            {
+                tokens.push_back(LOG);
+                need_fill = true;
+                i += 2;
+            }
+            else if (expression.substr(i, 2) == LN)
+            {
+                tokens.push_back(LN);
+                need_fill = true;
+                i += 1;
+            }
             // invalid expression
-            if (need_fill)
+            else 
             {
                 tokens.clear();
                 return tokens;
             }
-
-            // allow binary operators
-            allow_binary = true;
-
-            tokens.push_back(")");
-            open_parenthesis--;
-        }
-        else if (expression[i] == '{')
-        {
-            tokens.push_back("{");
-            open_brackets++;
-            need_fill = true;
-        }
-        else if (expression[i] == '}')
-        {
-            // invalid expression
-            if (need_fill)
-            {
-                tokens.clear();
-                return tokens;
-            }
-
-            // allow binary operators
-            allow_binary = true;
-
-            tokens.push_back("}");
-            open_brackets--;
-        }
-        // check for function
-        else if (expression.substr(i, 4).compare("sin("))
-        {
-            tokens.push_back("sin(");
-            open_parenthesis++;
-            need_fill = true;
-            i += 3;
-        }
-        else if (expression.substr(i, 4).compare("cos("))
-        {
-            tokens.push_back("cos(");
-            open_parenthesis++;
-            need_fill = true;
-            i += 3;
-        }
-        else if (expression.substr(i, 4).compare("tan("))
-        {
-            tokens.push_back("tan(");
-            open_parenthesis++;
-            need_fill = true;
-            i += 3;
-        }
-        else if (expression.substr(i, 4).compare("cot("))
-        {
-            tokens.push_back("cot(");
-            open_parenthesis++;
-            need_fill = true;
-            i += 3;
-        }
-        else if (expression.substr(i, 4).compare("log("))
-        {
-            tokens.push_back("log(");
-            open_parenthesis++;
-            need_fill = true;
-            i += 3;
-        }
-        else if (expression.substr(i, 3).compare("ln("))
-        {
-            tokens.push_back("ln(");
-            open_parenthesis++;
-            need_fill = true;
-            i += 3;
-        }
-        // invalid expression
-        else
-        {
-            tokens.clear();
-            return tokens;
         }
     }
 
@@ -215,106 +221,213 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
 }
 
 
+/**
+ * @brief Transforms infix notation epxressions to posfix notation using the Shunting Yard algorithm
+ * 
+ * @param tokens infix notation expression parsed into tokens
+ * @return std::queue<std::string> postfix notation expression
+ */
 std::queue<std::string> EvaluateExpression::shunting_yard(std::vector<std::string> tokens)
 {
     // operator stack and output queue
     std::stack<std::string> opStack;
     std::queue<std::string> outQueue;
 
-    for(int i = 0; i < tokens.size(); i++)
+    while (tokens.size() > 0)
     {
-        std::string token = tokens.at(i);
+        std::string token = tokens.front();
+        tokens.erase(tokens.begin());
 
-        if (true)
+        // token is number
+        if (isdigit(token[0]) || token[0]  == '.')
         {
             outQueue.push(token);
         }
-        else if (true)
+        // token is operator
+        else if (OP_PREC.find(token) != OP_PREC.end())
         {
-            
+            while (opStack.size() > 0)
+            {
+                std::map<std::string, int>::const_iterator stack_pos = OP_PREC.find(opStack.top());
+                std::map<std::string, int>::const_iterator pos = OP_PREC.find(token);
+
+                // pop from op_stack if not left parenthesis and top of op_stack has greater precedence
+                // or if same precedence and token is left associative
+                if (stack_pos->first != "(")
+                {
+                    if ((pos->second < stack_pos->second) ||
+                        (stack_pos->second == pos->second && pos->second <= LEFT_ASSOC))
+                    {
+                        outQueue.push(stack_pos->first);
+                        opStack.pop();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            opStack.push(token);
         }
+        else if (token == "(" || token == "{")
+        {
+            opStack.push(token);
+        }
+        else if (token == ")" || token == "}")
+        {
+            // get closing bracket/parenthesis
+            std::string closing;
+
+            if (token == ")")
+                closing = "(";
+            else
+                closing = "{";
+
+            while (opStack.top() != closing)
+            {
+                outQueue.push(opStack.top());
+                opStack.pop();
+            }
+
+            opStack.pop();
+        }
+    }
+
+    // pop remaining items from the operator stack into output queue
+    while (opStack.size() > 0)
+    {
+        outQueue.push(opStack.top());
+        opStack.pop();
     }
 
     return outQueue;
 }
 
-// ALGORITHM IS FROM WIKIPEDIA
-// while there are tokens to be read:
-//     read a token
-//     if the token is:
-//     - a number:
-//         put it into the output queue
-//     - a function:
-//         push it onto the operator stack 
-//     - an operator o1:
-//         while (
-//             there is an operator o2 other than the left parenthesis at the top
-//             of the operator stack, and (o2 has greater precedence than o1
-//             or they have the same precedence and o1 is left-associative)
-//         ):
-//             pop o2 from the operator stack into the output queue
-//         push o1 onto the operator stack
-//     - a left parenthesis (i.e. "("):
-//         push it onto the operator stack
-//     - a right parenthesis (i.e. ")"):
-//         while the operator at the top of the operator stack is not a left parenthesis:
-//             {assert the operator stack is not empty}
-//             /* If the stack runs out without finding a left parenthesis, then there are mismatched parentheses. */
-//             pop the operator from the operator stack into the output queue
-//         {assert there is a left parenthesis at the top of the operator stack}
-//         pop the left parenthesis from the operator stack and discard it
-//         if there is a function token at the top of the operator stack, then:
-//             pop the function from the operator stack into the output queue
-// /* After the while loop, pop the remaining items from the operator stack into the output queue. */
-// while there are tokens on the operator stack:
-//     /* If the operator token on the top of the stack is a parenthesis, then there are mismatched parentheses. */
-//     {assert the operator on top of the stack is not a (left) parenthesis}
-//     pop the operator from the operator stack onto the output queue
 
-
+/**
+ * @brief Uses Reverse Polish Notation (RPN) to evaluate mathematical expressions
+ * 
+ * @param output output queue from Shunting Yard algorithm
+ * @return double answer to expression
+ */
 double EvaluateExpression::rpn(std::queue<std::string> output)
 {
+    std::stack<int> opStack;
+
+    while (output.size() > 0)
+    {
+        std::string token = output.front();
+        output.pop();
+
+        // check for operator, else number
+        if (OP_PREC.find(token) != OP_PREC.end())
+        {
+            std::map<std::string, int>::const_iterator pos = OP_PREC.find(token);
+
+            if (pos->second <= LEFT_ASSOC)
+            {
+                double first = opStack.top();
+                opStack.pop();
+                double second = opStack.top();
+                opStack.pop();
+
+                double result;
+
+                if (token == "+")
+                {
+                    result = first + second;
+                }
+                else if (token == "-")
+                {
+                    result = first - second;
+                }
+                else if (token == "*")
+                {
+                    result = first * second;
+                }
+                else if (token == "/")
+                {
+                    result = first / second;
+                }
+            }
+            else
+            {
+                double first = opStack.top();
+                opStack.pop();
+
+                double result;
+
+                if (token == "^")
+                {
+
+                }
+                else if (token == SIN)
+                {
+
+                }
+                else if (token == COS)
+                {
+                    
+                }
+                else if (token == TAN)
+                {
+                    
+                }
+                else if (token == COT)
+                {
+                    
+                }
+                else if (token == LOG)
+                {
+                    
+                }
+                else if (token == LN)
+                {
+                    
+                }
+            }
+        }
+        else
+        {
+           try
+            {
+                opStack.push(std::stod(token));
+            }
+            catch (std::invalid_argument& ia)
+            {
+                return 0;
+            } 
+        }
+    }
 
     return 0;
 }
 
+
 int main()
 {
-    std::string exp1 = "-5.78+-(4-2.23)+sin(0)*cos(1)/(1+tan(2*ln(-3+2*(1.23+99.111)))";
-    std::string exp2 = "---3";
-    std::string exp3 = "(())";
-    std::string exp4 = "((5))";
-    std::string exp5 = "((2+3/)(4/- ";
+    std::string arr[] = {"3+4*2/(1-5)^(2^(3))",
+                        "sin(cos(2)/3*5)"};
 
-    std::vector<std::string> t = EvaluateExpression::get_tokens(exp1);
-    for (int i = 0; i < t.size(); i++)
+    for (int i = 0; i < 2; i++)
     {
-        std::cout << t.at(i) << ", ";
+        std::vector<std::string> bro = EvaluateExpression::get_tokens(arr[i]);
+        std::queue<std::string> t = EvaluateExpression::shunting_yard(bro);
+
+        while (t.size() > 0)
+        {
+            std::cout << t.front() << ", ";
+            t.pop();
+        }
+
+        std::cout << std::endl;
     }
-    std::cout << std::endl << std::endl;
-    t = EvaluateExpression::get_tokens(exp2);
-    for (int i = 0; i < t.size(); i++)
-    {
-        std::cout << t.at(i) << ", ";
-    }
-    std::cout << std::endl << std::endl;
-    t = EvaluateExpression::get_tokens(exp3);
-    for (int i = 0; i < t.size(); i++)
-    {
-        std::cout << t.at(i) << ", ";
-    }
-    std::cout << std::endl << std::endl;
-    t = EvaluateExpression::get_tokens(exp4);
-    for (int i = 0; i < t.size(); i++)
-    {
-        std::cout << t.at(i) << ", ";
-    }
-    std::cout << std::endl << std::endl;
-    t = EvaluateExpression::get_tokens(exp5);
-    for (int i = 0; i < t.size(); i++)
-    {
-        std::cout << t.at(i) << ", ";
-    }
+    
 
     return 0;
 }
