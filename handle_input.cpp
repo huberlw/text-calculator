@@ -52,7 +52,7 @@ void HandleInput::manual()
     // operators
     std::cout << "\n\tAvailable Operators:" << std::endl;
     std::cout << "\t\t+ = add" << std::endl;
-    std::cout << "\t\t- = subtract" << std::endl;
+    std::cout << "\t\t- = subtract/unary negation" << std::endl;
     std::cout << "\t\t* = multiply" << std::endl;
     std::cout << "\t\t/ = divide" << std::endl;
     std::cout << "\t\t^ = power" << std::endl;
@@ -78,6 +78,7 @@ void HandleInput::manual()
     std::cout << "\t\t3 + 4 * 2 / (1 - 5)^(2^3)" << std::endl;
     std::cout << "\t\tsin(1)^2 + 2" << std::endl;
     std::cout << "\t\t(-sin 1 + 1) (1 / -cos 1)" << std::endl;
+    std::cout << "\t\t--(--(log(--4)--(1)))" << std::endl;
 
     // help info
     std::cout << "\n\tAdditional Options:" << std::endl;

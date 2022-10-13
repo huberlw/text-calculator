@@ -69,7 +69,8 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
     // unary operator checks
     bool allow_binary = false;
     bool unary_needs_num = false;
-    int bracket_after = 0;
+    std::stack<int> bracket_after;
+    bracket_after.push(0);
 
     // number of brackets/parentheses left open
     int open_brackets = 0;
@@ -112,13 +113,12 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
                     // close parenthesis around (-1 * x)
                     if (unary_needs_num)
                     {
-                        tokens.push_back(")");
                         unary_needs_num = false;
 
-                        while (bracket_after > 0)
+                        while (bracket_after.top() > 0)
                         {
                             tokens.push_back(")");
-                            bracket_after--;
+                            bracket_after.top()--;
                         }
                     }
                 }
@@ -135,14 +135,16 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
                 tokens.push_back("-1");
                 tokens.push_back("*");
 
-                if (unary_needs_num)
+                if (bracket_after.size() > 0)
                 {
-                    bracket_after++;
+                    bracket_after.top()++;
                 }
                 else
                 {
-                  unary_needs_num = true;  
+                    bracket_after.push(0);
                 }
+                
+                unary_needs_num = true;  
             }
             // check for binary operator
             else if (expression[i] == '*' || expression[i] == '/')
@@ -182,18 +184,14 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
                 if (tokens.size() > 0 && (tokens.back() == ")" || tokens.back() == "}"))
                 {
                     tokens.push_back("*");
-                    allow_binary = false;
                 }
 
                 tokens.push_back("(");
                 open_parenthesis++;
                 need_fill = true;
-                
-                if (unary_needs_num)
-                {
-                    unary_needs_num = false;
-                    bracket_after++;
-                }  
+                allow_binary = false;
+                unary_needs_num = false;
+                bracket_after.push(0);
             }
             else if (expression[i] == ')')
             {
@@ -209,10 +207,15 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
                 tokens.push_back(")");
                 open_parenthesis--;
 
-                while (bracket_after > 0)
+                while (bracket_after.top() > 0)
                 {
                     tokens.push_back(")");
-                    bracket_after--;
+                    bracket_after.top()--;
+                }
+
+                if (bracket_after.size() > 0)
+                {
+                    bracket_after.pop();
                 }
             }
             else if (expression[i] == '{')
@@ -221,18 +224,14 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
                 if (tokens.size() > 0 && (tokens.back() == ")" || tokens.back() == "}"))
                 {
                     tokens.push_back("*");
-                    allow_binary = false;
                 }
 
                 tokens.push_back("{");
                 open_brackets++;
                 need_fill = true;
-
-                if (unary_needs_num)
-                {
-                    unary_needs_num = false;
-                    bracket_after++;
-                }  
+                allow_binary = false;
+                unary_needs_num = false;
+                bracket_after.push(0);
             }
             else if (expression[i] == '}')
             {
@@ -248,10 +247,15 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
                 tokens.push_back("}");
                 open_brackets--;
 
-                while (bracket_after > 0)
+                while (bracket_after.top() > 0)
                 {
                     tokens.push_back(")");
-                    bracket_after--;
+                    bracket_after.top()--;
+                }
+
+                if (bracket_after.size() > 0)
+                {
+                    bracket_after.pop();
                 }
             }
             // check for function
@@ -259,41 +263,48 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
             {
                 tokens.push_back("^");
                 need_fill = true;
+                allow_binary = false;
             }
             else if (expression.substr(i, 3) == SIN)
             {
                 tokens.push_back(SIN);
                 need_fill = true;
+                allow_binary = false;
                 i += 2;
             }
             else if (expression.substr(i, 3) == COS)
             {
                 tokens.push_back(COS);
                 need_fill = true;
+                allow_binary = false;
                 i += 2;
             }
             else if (expression.substr(i, 3) == TAN)
             {
                 tokens.push_back(TAN);
                 need_fill = true;
+                allow_binary = false;
                 i += 2;
             }
             else if (expression.substr(i, 3) == COT)
             {
                 tokens.push_back(COT);
                 need_fill = true;
+                allow_binary = false;
                 i += 2;
             }
             else if (expression.substr(i, 3) == LOG)
             {
                 tokens.push_back(LOG);
                 need_fill = true;
+                allow_binary = false;
                 i += 2;
             }
             else if (expression.substr(i, 2) == LN)
             {
                 tokens.push_back(LN);
                 need_fill = true;
+                allow_binary = false;
                 i += 1;
             }
             // invalid expression
@@ -305,6 +316,13 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
                 throw std::invalid_argument(err_message);
             }
         }
+    }
+
+    // add final parenthesis
+    while (bracket_after.top() > 0)
+    {
+        tokens.push_back(")");
+        bracket_after.top()--;
     }
 
     // check for errors
@@ -494,7 +512,7 @@ std::string EvaluateExpression::rpn(std::queue<std::string> output)
                     }
                     else if (token == COT)
                     {
-                        result = cos(first) / sin(first);
+                        result = 1 / tan(first);
                     }
                     else if (token == LOG)
                     {
@@ -529,19 +547,24 @@ std::string EvaluateExpression::rpn(std::queue<std::string> output)
         }
         else
         {
-           try
+            // ensure string is valid number
+            if (is_num(token))
             {
                 opStack.push(std::stod(token));
             }
-            catch (std::invalid_argument)
+            else
             {
-                throw std::invalid_argument("invalid expression: " + token);
-            } 
+                throw std::invalid_argument("invalid number: " + token);
+            }
         }
     }
 
     if (opStack.size() != 1)
         throw std::invalid_argument("invalid expression");
-    
+
+    // check for overflow
+    if (opStack.top() == std::numeric_limits<double>::infinity())
+        return "overflow: the result could not be calculated... Rounding to " + std::to_string(opStack.top()) + ".";
+
     return std::to_string(opStack.top());
 }
