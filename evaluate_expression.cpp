@@ -46,7 +46,7 @@ void EvaluateExpression::evaluate(std::string expression)
     // try evaluating expression
     try
     {
-        std::cout << rpn(shunting_yard(get_tokens(expression))) << std::endl;
+        std::cout << "Result: " << rpn(shunting_yard(get_tokens(expression))) << std::endl;
     }
     catch(const std::exception& e)
     {
