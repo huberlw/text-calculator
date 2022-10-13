@@ -1,5 +1,6 @@
 #include "evaluate_expression.h"
 
+// scientific functions
 const std::string SIN = "sin";
 const std::string COS = "cos";
 const std::string TAN = "tan";
@@ -7,9 +8,13 @@ const std::string COT = "cot";
 const std::string LOG = "log";
 const std::string LN = "ln";
 
+// highest precedence level for left associated operators
 const int LEFT_ASSOC = 2;
+
+// highest precendece level for operators which need two numbers
 const int TAKES_TWO = 3;
 
+// operators with precedence
 const std::map<std::string, int> OP_PREC = {{"+", 1}, {"-", 1}, {"*", 2}, {"/", 2},
                                             {"^", 3}, {SIN, 4}, {COS, 4}, {TAN, 4},
                                             {COT, 4}, {LOG, 4}, {LN, 4}};
@@ -141,7 +146,7 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
                 }
                 else
                 {
-                    bracket_after.push(0);
+                    break;
                 }
                 
                 unary_needs_num = true;  
@@ -319,10 +324,13 @@ std::vector<std::string> EvaluateExpression::get_tokens(std::string expression)
     }
 
     // add final parenthesis
-    while (bracket_after.top() > 0)
+    if (bracket_after.size() > 0)
     {
-        tokens.push_back(")");
-        bracket_after.top()--;
+       while (bracket_after.top() > 0)
+        {
+            tokens.push_back(")");
+            bracket_after.top()--;
+        } 
     }
 
     // check for errors
@@ -559,6 +567,7 @@ std::string EvaluateExpression::rpn(std::queue<std::string> output)
         }
     }
 
+    // check for extra operators
     if (opStack.size() != 1)
         throw std::invalid_argument("invalid expression");
 
